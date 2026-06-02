@@ -221,13 +221,19 @@ Toda e qualquer comunicação com o banco de dados deve passar por funções iso
 
 ```text
 src/
-├── app/                  ← Páginas e layouts (Next.js App Router)
-├── components/           ← Componentes de UI reutilizáveis
-├── services/             ← ÚNICA camada que conhece o Firebase
-│   ├── animais.ts        
-│   └── doacoes.ts        
+├── app/                  # (Boundary) Páginas e rotas (Next.js App Router)
+│   ├── adocao/
+│   ├── denuncias/
+│   └── page.tsx
+├── components/           # (Boundary) Componentes de UI reutilizáveis
+│   ├── CardAnimal.tsx
+│   └── Header.tsx
+├── services/             # (Control) ÚNICA camada que comunica com o banco
+│   ├── animais.ts
+│   └── denuncias.ts
 └── lib/
-    └── firebase.ts       ← Configuração e instância do Firebase
+    └── firebase/         # (Entity Config) Configuração e instância do Firebase
+        └── config.ts
 ```
 
 ---
