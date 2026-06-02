@@ -1,349 +1,300 @@
-# 🐾 CampusPet — Guia de Versionamento e Integração Git + Jira
+# 🐾 Manual de Boas Práticas de Programação e Arquitetura — CampusPet
 
 **Equipe:** Bia, Mateus e Guilherme  
 **Elaborado por:** Tech Lead  
 **Data:** Junho de 2026  
-**Versão:** 1.2
+**Versão:** 1.1
 
 ---
 
-## 1. Introdução
+## Introdução
 
-Oi, time! 👋
+Este documento define os padrões técnicos inegociáveis do projeto CampusPet. Ele não é uma sugestão — é o contrato de qualidade que a nossa equipe assina para garantir que o código seja consistente, performático e fácil de manter por qualquer pessoa do time, hoje e no futuro.
 
-À medida que o CampusPet cresce e chegamos mais perto do nosso MVP, manter o código organizado e o Jira atualizado deixa de ser um detalhe e passa a ser uma necessidade real. Sem um padrão claro, perdemos tempo tentando entender "o que foi feito?", "qual branch corresponde a qual tarefa?" e atualizando cards manualmente — tempo que poderíamos estar usando para construir produto.
+Sempre que tiver dúvida sobre "como fazer", consulte este manual antes de perguntar ou improvisar. E se algo não estiver coberto aqui, traga para discussão antes de criar um padrão novo sozinho.
 
-**Por isso, a partir de agora, adotamos um padrão unificado de versionamento com integração automática entre o GitHub e o Jira.** Isso nos traz três ganhos imediatos:
-
-- ⏱ **Ganho de tempo:** O Jira atualiza o status dos cards automaticamente quando você faz um commit ou abre um PR — sem precisar entrar no board manualmente.
-- 🔍 **Rastreabilidade total:** Qualquer pessoa da equipe consegue ver, no card do Jira, exatamente quais commits e branches estão relacionados àquela tarefa.
-- 🚀 **Histórico limpo para o MVP:** Um repositório bem organizado facilita revisões de código, a identificação de bugs e o onboarding de novos membros futuramente.
-
-Não se preocupem se parecer muito no começo — este guia explica tudo passo a passo, tanto pelo **terminal** quanto pelo **GitHub Desktop**, para que cada um use a ferramenta com que se sentir mais confortável. Em poucos dias vai virar rotina. Vamos juntos! 💪
+Nossa stack: **Next.js (App Router) · Tailwind CSS v3 · Lucide React · Firebase**
 
 ---
 
-## 2. Onde Encontrar a Chave da Tarefa no Jira
+## 1. Padrões Visuais e de Interface
 
-Cada card (tarefa) no nosso quadro do Jira possui um **identificador único**, chamado de **Chave da Tarefa**. Ela fica visível no próprio card, geralmente no canto superior esquerdo ou na URL ao abrir a tarefa.
+A identidade visual do CampusPet adota um tema escuro (Dark Mode) moderno, com forte apelo visual por meio de fundos translúcidos e elementos de destaque arredondados. Inconsistências visuais entre telas passam uma imagem de desorganização, portanto, as regras abaixo são inegociáveis.
 
-**O formato padrão do nosso projeto é:**
+---
+
+### 1.1 Paleta de Cores e Estilos Globais
+
+O nosso sistema utiliza a paleta nativa de cores `slate`, `blue` e `amber` do Tailwind CSS. O arquivo `globals.css` já possui a configuração base do corpo do site e da barra de rolagem customizada.
+
+| Papel | Tailwind Class | Cor de Referência |
+|-------|----------------|-------------------|
+| Fundo principal | `bg-slate-950` | Azul ultra-escuro |
+| Texto principal | `text-slate-300` | Cinza claro/azulado |
+| Ação Primária (Institucional) | `bg-blue-600` | Azul |
+| Ação Secundária (Adoção) | `bg-amber-500` | Amarelo/Âmbar |
+
+**✅ Certo — usar as classes semânticas do Tailwind diretamente:**
+```tsx
+<div className="bg-slate-950 text-slate-300 min-h-screen">
+  <button className="bg-blue-600 text-white hover:bg-blue-700">
+    Ajudar Agora
+  </button>
+  <button className="bg-amber-500 text-slate-900 hover:bg-amber-600">
+    Quero Adotar
+  </button>
+</div>
+```
+
+**❌ Errado — usar hex avulso ou cores arbitrárias que fujam da paleta `slate`/`blue`/`amber`:**
+```tsx
+<div className="bg-[#121212]">
+  <button className="bg-red-500">
+    Ajudar Agora
+  </button>
+</div>
+```
+
+---
+
+### 1.2 Tipografia
+
+O CampusPet utiliza uma fonte sans-serif limpa e geométrica para passar credibilidade e modernidade. Não utilizaremos fontes monospace (como a VT323) nesta versão da interface.
+
+**✅ Certo — usar variações de peso (bold, semibold, regular) da fonte principal:**
+```tsx
+<h1 className="text-5xl font-bold text-white">Proteção Animal no Campus</h1>
+<p className="text-lg font-normal text-slate-300">Cuidando dos animais que fazem parte da nossa comunidade...</p>
+```
+
+**❌ Errado — importar fontes avulsas ou misturar serifadas:**
+```tsx
+<h1 style={{ fontFamily: 'Times New Roman' }}>Proteção Animal</h1>
+```
+
+---
+
+### 1.3 Arredondamento de Bordas
+
+A nossa identidade visual utiliza botões no formato "pílula" (pill-shaped) e elementos de interface com bordas bem suaves. 
+
+| Classe Tailwind | Uso |
+|-----------------|-----|
+| `rounded-full` | Botões de ação principais (ex: "Ajudar Agora", "Quero Adotar") e badges |
+| `rounded-2xl` / `rounded-xl` | Cards de animais, modais e painéis |
+| `rounded-lg` | Inputs, selects e elementos menores |
+
+**✅ Certo:**
+```tsx
+<button className="rounded-full bg-blue-600 px-6 py-3 font-semibold text-white">
+  Ajudar Agora
+</button>
+```
+
+---
+
+### 1.4 Ícones
+
+**Todos os ícones do projeto devem vir exclusivamente da biblioteca `lucide-react`.** Não importar SVGs avulsos, não usar emojis como ícones funcionais, não instalar outras bibliotecas de ícones.
+
+**✅ Certo:**
+```tsx
+import { Heart, Search } from 'lucide-react';
+
+export function BotoesHero() {
+  return (
+    <div className="flex gap-4">
+      <button className="...">
+        <Heart className="w-5 h-5 mr-2" />
+        Quero Adotar
+      </button>
+      <button className="...">
+        <Search className="w-5 h-5 mr-2" />
+        Portal da Transparência
+      </button>
+    </div>
+  );
+}
+```
+
+---
+
+## 2. Performance no React
+
+Código que funciona não é sinônimo de código performático. Esta seção cobre os dois erros mais comuns que causam lentidão visível na interface — a sensação de "lag" ou "engasgamento" ao rolar a página.
+
+---
+
+### 2.1 Nunca use `useState` para capturar scroll
+
+Este é o erro de performance mais frequente em projetos React. Quando você armazena a posição do scroll em um `useState`, **cada pixel de rolagem dispara um novo re-render do componente inteiro** — incluindo todos os seus filhos. 
+
+O scroll é um dado volátil e de leitura. Ele não precisa acionar a lógica de renderização do React — precisa apenas mover um elemento na tela. Para isso, use `useRef` e manipule o DOM diretamente.
+
+**❌ Errado — `useState` no scroll (causa re-render a cada pixel):**
+```tsx
+import { useState, useEffect } from 'react';
+
+export function Header() {
+  const [scrollY, setScrollY] = useState(0); 
+
+  useEffect(() => {
+    const handleScroll = () => setScrollY(window.scrollY);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  return (
+    <header style={{ opacity: scrollY > 50 ? 1 : 0.5 }}>
+      CampusPet
+    </header>
+  );
+}
+```
+
+**✅ Certo — `useRef` + manipulação direta do DOM (zero re-renders):**
+```tsx
+import { useEffect, useRef } from 'react';
+
+export function Header() {
+  const headerRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!headerRef.current) return;
+      headerRef.current.style.opacity = window.scrollY > 50 ? '1' : '0.5';
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  return (
+    <header ref={headerRef}>
+      CampusPet
+    </header>
+  );
+}
+```
+
+---
+
+### 2.2 Use `will-change-transform` para acelerar animações
+
+Quando um elemento vai ser animado, adicionar a classe `will-change-transform` instrui o browser a **promover o elemento para uma camada de composição exclusiva na GPU**. 
+
+**✅ Certo — avisar a GPU com antecedência:**
+```tsx
+<div className="will-change-transform transition-transform duration-300 hover:-translate-y-1">
+  <AnimalCard />
+</div>
+```
+
+**❌ Errado — animar propriedades que forçam recálculo de layout:**
+```tsx
+<div className="transition-all duration-300 hover:mt-[-4px]">
+  <AnimalCard />
+</div>
+```
+
+---
+
+## 3. Arquitetura e Banco de Dados — O Padrão Repository
+
+Esta é a regra arquitetural mais importante do projeto, e o seu descumprimento pode inviabilizar o futuro do sistema.
+
+---
+
+### 3.1 Por que isso importa: a migração que vem aí
+
+Estamos usando **Firebase no MVP** porque é rápido de configurar. No entanto, **o sistema será migrado para um banco de dados próprio da universidade** após a fase inicial.
+
+Se o código das telas chamar o Firebase diretamente, quando essa migração acontecer, precisaremos abrir cada arquivo de componente para remover as chamadas. A solução é o **Padrão Repository**.
+
+---
+
+### 3.2 A Regra
+
+**O código de frontend (páginas e componentes) NUNCA deve importar ou chamar o Firebase diretamente.**
+
+Toda e qualquer comunicação com o banco de dados deve passar por funções isoladas dentro da pasta `services/`. 
 
 ```text
-CP-X
-```
-
-Onde `CP` é a sigla do projeto (**C**ampus**P**et) e `X` é o número sequencial da tarefa.
-
-**Exemplos reais:**
-
-| Chave | Tarefa |
-|-------|--------|
-| `CP-12` | Criar componente Header responsivo |
-| `CP-15` | Criar botão de adoção na vitrine |
-| `CP-23` | Integrar webhook de doações PIX |
-
-> 💡 **Dica:** Antes de começar qualquer tarefa, abra o card no Jira e anote a chave. Ela vai acompanhar tudo — a branch, os commits e o PR.
-
----
-
-## 3. Padrão de Nomenclatura de Branches
-
-Quando você for iniciar o trabalho em uma tarefa, o primeiro passo é criar uma branch com nome padronizado. Isso conecta automaticamente o seu código ao card no Jira.
-
-### Formato obrigatório
-
-```text
-tipo/CHAVE-DA-TAREFA-descricao-curta
-```
-
-### Tipos de branch aceitos
-
-| Tipo | Quando usar |
-|------|-------------|
-| `feature` | Criação de uma funcionalidade nova |
-| `fix` | Correção de um bug |
-| `hotfix` | Correção urgente em produção |
-| `refactor` | Melhoria de código sem mudar comportamento |
-| `chore` | Tarefas de configuração, dependências, CI/CD |
-| `docs` | Atualização de documentação |
-
-### Exemplo prático
-
-Você pegou a tarefa **CP-15** que pede para criar o botão de adoção. Sua branch deve ser:
-
-```text
-feature/CP-15-criar-botao-adocao
+src/
+├── app/                  ← Páginas e layouts (Next.js App Router)
+├── components/           ← Componentes de UI reutilizáveis
+├── services/             ← ÚNICA camada que conhece o Firebase
+│   ├── animais.ts        
+│   └── doacoes.ts        
+└── lib/
+    └── firebase.ts       ← Configuração e instância do Firebase
 ```
 
 ---
 
-### 💻 Como criar a branch pelo Terminal
+### 3.3 Como implementar na prática
 
-Antes de criar a branch, certifique-se de que está na branch `develop` e com o código atualizado:
+**Passo 1 — Crie funções isoladas em `services/`:**
 
-```bash
-# 1. Vá para a branch develop
-git checkout develop
+```ts
+// src/services/animais.ts
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
-# 2. Baixe as últimas atualizações do repositório remoto
-git pull origin develop
+export interface Animal {
+  id: string;
+  nome: string;
+  status: string;
+}
 
-# 3. Crie a nova branch já a partir do develop atualizado
-git checkout -b feature/CP-15-criar-botao-adocao
+export async function getAnimaisParaAdocao(): Promise<Animal[]> {
+  const q = query(collection(db, 'animais'), where('status', '==', 'Para Adoção'));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Animal));
+}
 ```
 
-Para confirmar que a branch foi criada e que você já está nela:
+**Passo 2 — As telas chamam apenas as funções de `services/`:**
 
-```bash
-git branch
-# A branch atual aparece com um asterisco (*) na frente
-```
+```tsx
+// src/app/adocao/page.tsx
+import { getAnimaisParaAdocao } from '@/services/animais';
 
----
+export default async function AdocaoPage() {
+  const animais = await getAnimaisParaAdocao();
 
-### 🖥️ Como criar a branch pelo GitHub Desktop
-
-1. No GitHub Desktop, clique em **Current Branch** (no topo)
-2. Clique em **New Branch**
-3. Digite o nome seguindo o formato acima
-4. Confirme que a opção **"Create branch based on... `develop`"** está selecionada
-5. Clique em **Create Branch**
-
----
-
-> ⚠️ **Atenção:** Use sempre letras minúsculas e hífens no lugar de espaços. Nunca use acentos ou caracteres especiais no nome da branch.
-
----
-
-## 4. Padrão de Nomenclatura de Commits
-
-O commit é o momento em que você "salva" uma parte do seu trabalho no repositório. A mensagem do commit é o que o Jira lê para associar automaticamente aquela alteração ao card correto.
-
-### Formato obrigatório
-
-```text
-tipo: [CHAVE-DA-TAREFA] Descrição clara do que foi feito
-```
-
-### Tipos de commit aceitos
-
-| Tipo | Quando usar |
-|------|-------------|
-| `feat` | Adição de uma funcionalidade nova |
-| `fix` | Correção de bug |
-| `refactor` | Refatoração de código |
-| `style` | Alterações visuais, CSS, Tailwind (sem lógica) |
-| `chore` | Configurações, dependências |
-| `docs` | Documentação |
-| `test` | Adição ou correção de testes |
-
-### Exemplo prático
-
-Trabalhando na tarefa **CP-15**, você acabou de adicionar a cor primária no Tailwind. O commit deve ser:
-
-```text
-feat: [CP-15] adiciona cor primaria no tailwind
-```
-
-Outros exemplos do dia a dia:
-
-```text
-fix: [CP-12] corrige quebra de layout do header no mobile
-
-style: [CP-20] ajusta espaçamento dos cards de adocao
-
-refactor: [CP-18] extrai logica de filtros para hook customizado
-
-chore: [CP-23] instala biblioteca de integracao com webhook
+  return (
+    <main>
+      {animais.map(animal => (
+        <AnimalCard key={animal.id} animal={animal} />
+      ))}
+    </main>
+  );
+}
 ```
 
 ---
 
-### 💻 Como fazer o commit pelo Terminal
+## 4. Resumo das Regras
 
-```bash
-# 1. Veja quais arquivos foram alterados
-git status
+| # | Regra | Status |
+|---|-------|--------|
+| 1 | Utilizar o Dark Mode padronizado em `globals.css` (`slate-950` para fundo) | Inegociável |
+| 2 | Botões principais devem usar `rounded-full` e cores `blue` ou `amber` | Inegociável |
+| 3 | Todos os ícones exclusivamente de `lucide-react` | Inegociável |
+| 4 | Manter a barra de rolagem customizada conforme `globals.css` | Inegociável |
+| 5 | Nunca usar `useState` para capturar scroll — usar `useRef` | Inegociável |
+| 6 | Adicionar `will-change-transform` em elementos animados na GPU | Fortemente recomendado |
+| 7 | Nenhuma tela importa Firebase diretamente — sempre via `services/` | Inegociável |
 
-# 2. Adicione os arquivos que fazem parte deste commit
-#    Para adicionar um arquivo específico:
-git add src/components/AdoptionSection.tsx
+---
 
-#    Para adicionar TODOS os arquivos alterados de uma vez:
-git add .
+## 5. Conclusão
 
-# 3. Faça o commit com a mensagem no formato correto
-git commit -m "feat: [CP-15] adiciona botao de adocao na vitrine"
+Boas práticas não existem para complicar o trabalho — existem para garantir que o projeto continue saudável conforme cresce. Cada regra deste documento foi definida com base em problemas reais que projetos sem padrão enfrentam: interfaces inconsistentes, performance degradada e refatorações caras.
 
-# 4. Envie a branch para o GitHub (primeira vez que sobe a branch)
-git push -u origin feature/CP-15-criar-botao-adocao
+Quando em dúvida, a pergunta certa é: **"se esse código precisar mudar daqui a seis meses, vai ser fácil ou vai ser um pesadelo?"** Se a resposta for pesadelo, revise antes de fazer o PR.
 
-#    Nos próximos pushes da mesma branch, basta:
-git push
+---
+*CampusPet · Equipe de Desenvolvimento · Documento interno · v1.1 · Junho de 2026*
 ```
-
-> 💡 **Dica:** Use `git status` com frequência — ele mostra o estado atual do seu repositório e evita surpresas na hora do commit.
-
----
-
-### 🖥️ Como fazer o commit pelo GitHub Desktop
-
-1. Após salvar suas alterações no editor, abra o **GitHub Desktop**
-2. Na aba **Changes**, revise os arquivos alterados
-3. Marque apenas os arquivos que fazem parte deste commit
-4. No campo **Summary**, escreva a mensagem seguindo o formato acima
-5. Clique em **Commit to `nome-da-sua-branch`**
-6. Clique em **Push origin** para enviar ao GitHub
-
----
-
-> 💡 **Dica:** Faça commits pequenos e frequentes, cada um descrevendo uma mudança específica. Evite commits gigantes com tudo junto — eles dificultam revisões e a rastreabilidade no Jira.
-
----
-
-## 5. Pull Requests (PRs)
-
-Quando sua tarefa estiver concluída e você quiser integrar o código à branch principal, é hora de abrir um **Pull Request (PR)** no GitHub.
-
-### Regra para o título do PR
-
-O título **deve sempre começar** com a chave da tarefa entre colchetes:
-
-```text
-[CP-X] Descrição resumida do que foi implementado
-```
-
-### Exemplo prático
-
-```text
-[CP-15] Cria botão de adoção na vitrine de animais
-```
-
----
-
-### 💻 Como abrir o PR pelo Terminal
-
-Após fazer o push da sua branch, você pode abrir o PR diretamente pelo navegador. O terminal vai exibir um link direto após o push:
-
-```bash
-git push -u origin feature/CP-15-criar-botao-adocao
-
-# O terminal vai mostrar algo como:
-# remote: Create a pull request for 'feature/CP-15-criar-botao-adocao' on GitHub by visiting:
-# remote:   [https://github.com/campuspet/campuspet-web/pull/new/feature/CP-15-criar-botao-adocao](https://github.com/campuspet/campuspet-web/pull/new/feature/CP-15-criar-botao-adocao)
-```
-
-Basta clicar no link ou abrir o repositório no GitHub e clicar em **"Compare & pull request"**. Depois:
-
-1. Confirme que a **base branch** é `develop` (não `main`)
-2. Preencha o título seguindo o formato `[CP-X] Descrição`
-3. Adicione uma descrição resumida do que foi feito
-4. Atribua um colega como **Reviewer**
-5. Clique em **Create Pull Request**
-
----
-
-### 🖥️ Como abrir o PR pelo GitHub Desktop
-
-1. Após fazer o commit e o push, clique em **Create Pull Request** (botão que aparece no topo)
-2. O GitHub vai abrir no navegador automaticamente
-3. Siga os mesmos passos descritos acima (título, base branch, reviewer)
-
----
-
-### Boas práticas ao abrir um PR
-
-- **Descrição:** Escreva um breve resumo do que foi feito e, se necessário, como testar localmente.
-- **Reviewers:** Sempre solicite a revisão de pelo menos um colega antes de fazer o merge.
-- **Branch de destino:** Confirme que o PR está sendo aberto para `develop` (nunca direto para `main`).
-- **Checklist:** Verifique se o código está funcionando localmente antes de abrir o PR.
-
-> ⚠️ **Nunca faça merge do seu próprio PR** sem a aprovação de pelo menos um colega. Isso é uma proteção para todos nós.
-
----
-
-## 6. Referência Rápida de Comandos Git
-
-Para quem está começando a usar o terminal, aqui está um resumo dos comandos mais usados no dia a dia:
-
-```bash
-# Ver o estado atual do repositório
-git status
-
-# Ver em qual branch você está
-git branch
-
-# Trocar de branch
-git checkout nome-da-branch
-
-# Atualizar a branch atual com o remoto
-git pull
-
-# Ver o histórico de commits
-git log --oneline
-
-# Desfazer alterações em um arquivo (antes do commit)
-git checkout -- nome-do-arquivo
-
-# Ver a diferença entre o que foi alterado e o último commit
-git diff
-```
-
----
-
-## 7. Divisão de Papéis e Responsabilidades (MVP)
-
-Para garantirmos agilidade e mantermos a modularidade do nosso código durante o MVP, dividimos as responsabilidades do projeto em três frentes de trabalho. Cada integrante será o "dono" de uma camada específica da arquitetura:
-
-* **👩‍💻 Bia: Engenharia de UI e Componentização Front-end**
-    * **Foco:** Transformar o design em código modular, criando a base de componentes reutilizáveis dentro de `src/components/`.
-    * **Responsabilidade:** Garantir a consistência visual usando as diretrizes do Tailwind CSS (`globals.css`), respeitando limites de arredondamento de bordas e usando exclusivamente os ícones da biblioteca `lucide-react`.
-
-* **👨‍💻 Mateus: Arquitetura de Dados e Serviços (Backend/Firebase)**
-    * **Foco:** Construir o "motor" do sistema, isolando a configuração e as chamadas ao Firebase em `src/lib/firebase/config.ts`.
-    * **Responsabilidade:** Implementar o Padrão Repository na pasta `src/services/`, assegurando que o front-end nunca faça chamadas diretas ao banco de dados. Isso garantirá uma transição limpa para um banco relacional no futuro.
-
-* **👨‍💻 Guilherme: Integração Next.js e Performance**
-    * **Foco:** Montar o roteamento da aplicação dentro de `src/app/` e integrar os componentes criados pela Bia com as funções de dados desenvolvidas pelo Mateus.
-    * **Responsabilidade:** Otimizar a performance do React, gerenciando corretamente Server vs. Client Components, utilizando `useRef` (em vez de `useState`) para variáveis voláteis como rolagem de tela, e aplicando `will-change-transform` para aliviar a carga visual enviando animações para a GPU.
-
----
-
-## 8. Conclusão
-
-Time, essa prática começa a valer **imediatamente**, para todas as tarefas da sprint atual em diante.
-
-Sabemos que mudar hábitos exige um esforço inicial, mas em poucos dias isso vai se tornar automático — e todos vamos sentir a diferença na organização do projeto. Um repositório limpo e um board do Jira sempre atualizado são sinais de um time maduro e profissional.
-
-**Resumo rápido — cole no seu editor ou cole no bloco de notas:**
-
-```text
-Branch:  feature/CP-X-descricao-curta
-Commit:  feat: [CP-X] descricao do que foi feito
-PR:      [CP-X] Descricao resumida do que foi implementado
-```
-
-**Fluxo completo pelo terminal, do zero ao PR:**
-
-```bash
-git checkout develop
-git pull origin develop
-git checkout -b feature/CP-X-descricao-curta
-
-# ... faz as alterações no código ...
-
-git add .
-git commit -m "feat: [CP-X] descricao do que foi feito"
-git push -u origin feature/CP-X-descricao-curta
-
-# Abre o link que aparece no terminal para criar o PR no GitHub
-```
-
-Qualquer dúvida, pode chamar no grupo. Nenhuma pergunta é pequena demais — o importante é que todos estejamos alinhados.
-
-Bora codar! 🚀
-
----
-
-*CampusPet · Equipe de Desenvolvimento · Documento interno · v1.2 · Junho de 2026*
