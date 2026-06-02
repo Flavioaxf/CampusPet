@@ -9,7 +9,7 @@
 
 ## 1. Introdução
 
-Oi, time! 👋
+Oi, time!
 
 À medida que o CampusPet cresce e chegamos mais perto do nosso MVP, manter o código organizado e o Jira atualizado deixa de ser um detalhe e passa a ser uma necessidade real. Sem um padrão claro, perdemos tempo tentando entender "o que foi feito?", "qual branch corresponde a qual tarefa?" e atualizando cards manualmente — tempo que poderíamos estar usando para construir produto.
 
