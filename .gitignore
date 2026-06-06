@@ -1,7 +1,7 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
+node_modules/
 /.pnp
 .pnp.*
 .yarn/*
@@ -10,30 +10,36 @@
 !.yarn/releases
 !.yarn/versions
 
-# testing
-/coverage
-
 # next.js
-/.next/
-/out/
+.next/
+out/
+build/
 
-# production
-/build
+# env files (CRITICAL: Do NOT commit secrets)
+.env
+.env.local
+.env.*.local
+# .env.example should NOT be ignored (it is not by these patterns)
 
-# misc
-.DS_Store
-*.pem
+# firebase
+.firebase/
+firebase-debug.log
 
-# debug
+# testing and logs
+coverage/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# system and IDE
+.DS_Store
+.vscode/
+.idea/
+*.pem
 
-# vercel
+# misc
+/.gemini
 .vercel
 
 # typescript
