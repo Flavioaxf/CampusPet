@@ -1,14 +1,16 @@
-import { collection, doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, query, where, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import type { ICategoriaFinanceiraRepository } from '@/services/interfaces/ICategoriaFinanceiraRepository';
 import type { CategoriaFinanceira, CreateCategoriaFinanceiraDTO } from '@/types/domain';
+import { TipoCategoria } from '@/types/enums';
 
 const COLLECTION = 'categorias_financeiras';
 
 function toCategoriaFinanceira(id: string, data: Record<string, unknown>): CategoriaFinanceira {
   return {
     id,
-    ...(data as unknown as Omit<CategoriaFinanceira, 'id'>),
+    nome: data.nome as string,
+    tipo: data.tipo as TipoCategoria,
   };
 }
 
@@ -38,9 +40,8 @@ export class CategoriaFinanceiraRepository implements ICategoriaFinanceiraReposi
 
   async create(data: CreateCategoriaFinanceiraDTO): Promise<CategoriaFinanceira> {
     try {
-      const payload = { ...data };
       const ref = await addDoc(this.col, {
-        ...payload,
+        ...data,
       });
       const created = await getDoc(ref);
       return toCategoriaFinanceira(created.id, (created.data() as Record<string, unknown>) || {});
@@ -68,6 +69,29 @@ export class CategoriaFinanceiraRepository implements ICategoriaFinanceiraReposi
     } catch (error) {
       console.error(`[CategoriaFinanceiraRepository.delete] id=${id}`, error);
       throw new Error(`Erro ao excluir CategoriaFinanceira com id ${id}`);
+    }
+  }
+
+  async hasMovimentacoes(id: string): Promise<boolean> {
+    try {
+      const qDespesas = query(
+        collection(db, 'despesas'),
+        where('categoriaId', '==', id),
+        limit(1),
+      );
+      const snapDespesas = await getDocs(qDespesas);
+      if (!snapDespesas.empty) return true;
+
+      const qDoacoes = query(
+        collection(db, 'doacoes'),
+        where('categoriaId', '==', id),
+        limit(1),
+      );
+      const snapDoacoes = await getDocs(qDoacoes);
+      return !snapDoacoes.empty;
+    } catch (error) {
+      console.error(`[CategoriaFinanceiraRepository.hasMovimentacoes] id=${id}`, error);
+      throw new Error('Erro ao verificar movimentações da categoria');
     }
   }
 }

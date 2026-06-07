@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, query, where, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import type { IContaFinanceiraRepository } from '@/services/interfaces/IContaFinanceiraRepository';
 import type { ContaFinanceira, CreateContaFinanceiraDTO } from '@/types/domain';
@@ -8,7 +8,9 @@ const COLLECTION = 'contas_financeiras';
 function toContaFinanceira(id: string, data: Record<string, unknown>): ContaFinanceira {
   return {
     id,
-    ...(data as unknown as Omit<ContaFinanceira, 'id'>),
+    nome: data.nome as string,
+    tipo: data.tipo as string,
+    ativo: data.ativo as boolean,
   };
 }
 
@@ -38,9 +40,8 @@ export class ContaFinanceiraRepository implements IContaFinanceiraRepository {
 
   async create(data: CreateContaFinanceiraDTO): Promise<ContaFinanceira> {
     try {
-      const payload = { ...data };
       const ref = await addDoc(this.col, {
-        ...payload,
+        ...data,
       });
       const created = await getDoc(ref);
       return toContaFinanceira(created.id, (created.data() as Record<string, unknown>) || {});
@@ -68,6 +69,29 @@ export class ContaFinanceiraRepository implements IContaFinanceiraRepository {
     } catch (error) {
       console.error(`[ContaFinanceiraRepository.delete] id=${id}`, error);
       throw new Error(`Erro ao excluir ContaFinanceira com id ${id}`);
+    }
+  }
+
+  async hasMovimentacoes(id: string): Promise<boolean> {
+    try {
+      const qDespesas = query(
+        collection(db, 'despesas'),
+        where('contaId', '==', id),
+        limit(1),
+      );
+      const snapDespesas = await getDocs(qDespesas);
+      if (!snapDespesas.empty) return true;
+
+      const qDoacoes = query(
+        collection(db, 'doacoes'),
+        where('contaId', '==', id),
+        limit(1),
+      );
+      const snapDoacoes = await getDocs(qDoacoes);
+      return !snapDoacoes.empty;
+    } catch (error) {
+      console.error(`[ContaFinanceiraRepository.hasMovimentacoes] id=${id}`, error);
+      throw new Error('Erro ao verificar movimentações da conta');
     }
   }
 }

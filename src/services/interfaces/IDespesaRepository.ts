@@ -5,4 +5,6 @@ export interface IDespesaRepository {
   findAll(): Promise<Despesa[]>;
   create(data: CreateDespesaDTO): Promise<Despesa>;
   update(id: string, data: Partial<Despesa>): Promise<Despesa>;
+  findByPeriodo(inicio: Date, fim: Date): Promise<Despesa[]>;
+  findByAnimal(animalId: string): Promise<Despesa[]>;
 }

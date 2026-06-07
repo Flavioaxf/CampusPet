@@ -6,4 +6,5 @@ export interface IContaFinanceiraRepository {
   create(data: CreateContaFinanceiraDTO): Promise<ContaFinanceira>;
   update(id: string, data: Partial<ContaFinanceira>): Promise<ContaFinanceira>;
   delete(id: string): Promise<void>;
+  hasMovimentacoes(id: string): Promise<boolean>;
 }

@@ -3,6 +3,7 @@ import {
   alteracaoPendenteRepository, 
   animalRepository, 
   statusCastracaoRepository,
+  doacaoRepository,
   notificacaoRepository
 } from '@/services';
 import { PerfilUsuario, StatusAprovacao } from '@/types/enums';
@@ -12,6 +13,7 @@ jest.mock('@/services', () => ({
   alteracaoPendenteRepository: { findById: jest.fn(), update: jest.fn() },
   animalRepository: { create: jest.fn(), update: jest.fn() },
   statusCastracaoRepository: { create: jest.fn() },
+  doacaoRepository: { create: jest.fn() },
   logAuditoriaRepository: { create: jest.fn() },
   notificacaoRepository: { create: jest.fn() },
 }));
@@ -94,6 +96,26 @@ describe('ApprovalService', () => {
       await approvalService.aprovarAlteracao('alt1', gestor);
 
       expect(statusCastracaoRepository.create).toHaveBeenCalled();
+    });
+
+    it('should approve NEW Doacao', async () => {
+      const alteracao = {
+        id: 'alt1',
+        entidade: 'Doacao',
+        entidadeId: 'NEW',
+        dadosProposto: JSON.stringify({ valor: 100 }),
+        status: StatusAprovacao.PENDENTE,
+        submetidoPorId: 'vol1',
+      };
+      (alteracaoPendenteRepository.findById as jest.Mock).mockResolvedValue(alteracao);
+      (doacaoRepository.create as jest.Mock).mockResolvedValue({ id: 'd1', valor: 100 });
+
+      await approvalService.aprovarAlteracao('alt1', gestor);
+
+      expect(doacaoRepository.create).toHaveBeenCalled();
+      expect(alteracaoPendenteRepository.update).toHaveBeenCalledWith('alt1', expect.objectContaining({
+        status: StatusAprovacao.APROVADO,
+      }));
     });
 
     it('should throw error if already processed', async () => {

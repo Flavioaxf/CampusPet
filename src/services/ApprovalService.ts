@@ -2,6 +2,7 @@ import {
   alteracaoPendenteRepository, 
   animalRepository, 
   statusCastracaoRepository,
+  doacaoRepository,
   logAuditoriaRepository,
   notificacaoRepository
 } from '@/services';
@@ -11,7 +12,8 @@ import {
   TipoOperacao,
   TipoNotificacao,
   StatusNotificacao,
-  PerfilUsuario
+  PerfilUsuario,
+  StatusDoacao
 } from '@/types/domain';
 
 export class ApprovalService {
@@ -74,6 +76,23 @@ export class ApprovalService {
           dadosNovos: JSON.stringify(status),
           realizadoPorId: gestor.id
         });
+        break;
+
+      case 'Doacao':
+        if (alteracao.entidadeId === 'NEW') {
+          const doacao = await doacaoRepository.create({
+            ...dadosProposto,
+            status: StatusDoacao.CONFIRMADO
+          });
+          await logAuditoriaRepository.create({
+            entidade: 'Doacao',
+            entidadeId: doacao.id,
+            operacao: TipoOperacao.APROVACAO,
+            dadosAnteriores: null,
+            dadosNovos: JSON.stringify(doacao),
+            realizadoPorId: gestor.id
+          });
+        }
         break;
 
       default:

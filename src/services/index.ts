@@ -103,4 +103,5 @@ export * from './UserService';
 export * from './AnimalService';
 export * from './ProntuarioService';
 export * from './ApprovalService';
+export * from './FinanceiroService';
 

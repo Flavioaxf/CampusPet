@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, getDocs, addDoc, Timestamp } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, addDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import type { IEstornoRepository } from '@/services/interfaces/IEstornoRepository';
 import type { Estorno, CreateEstornoDTO } from '@/types/domain';
@@ -6,11 +6,12 @@ import type { Estorno, CreateEstornoDTO } from '@/types/domain';
 const COLLECTION = 'estornos';
 
 function toEstorno(id: string, data: Record<string, unknown>): Estorno {
-  const { realizadoEm, ...rest } = data;
   return {
     id,
-    ...(rest as unknown as Omit<Estorno, 'id' | 'realizadoEm'>),
-    realizadoEm: realizadoEm ? (realizadoEm as Timestamp).toDate() : new Date(),
+    doacaoId: data.doacaoId as string,
+    justificativa: data.justificativa as string,
+    realizadoPorId: data.realizadoPorId as string,
+    realizadoEm: (data.realizadoEm as Timestamp).toDate(),
   };
 }
 
@@ -40,9 +41,9 @@ export class EstornoRepository implements IEstornoRepository {
 
   async create(data: CreateEstornoDTO): Promise<Estorno> {
     try {
-      const payload = { ...data };
       const ref = await addDoc(this.col, {
-        ...payload,
+        ...data,
+        realizadoEm: serverTimestamp(),
       });
       const created = await getDoc(ref);
       return toEstorno(created.id, (created.data() as Record<string, unknown>) || {});
@@ -51,5 +52,4 @@ export class EstornoRepository implements IEstornoRepository {
       throw new Error('Erro ao criar Estorno');
     }
   }
-
 }

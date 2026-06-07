@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, getDocs, addDoc, updateDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, addDoc, updateDoc, query, where, orderBy, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import type { IDespesaRepository } from '@/services/interfaces/IDespesaRepository';
 import type { Despesa, CreateDespesaDTO } from '@/types/domain';
@@ -6,12 +6,16 @@ import type { Despesa, CreateDespesaDTO } from '@/types/domain';
 const COLLECTION = 'despesas';
 
 function toDespesa(id: string, data: Record<string, unknown>): Despesa {
-  const { data: dataField, registradoEm, ...rest } = data;
   return {
     id,
-    ...(rest as unknown as Omit<Despesa, 'id' | 'data' | 'registradoEm'>),
-    data: dataField ? (dataField as Timestamp).toDate() : new Date(),
-    registradoEm: registradoEm ? (registradoEm as Timestamp).toDate() : new Date(),
+    prontuarioId: data.prontuarioId as string,
+    contaId: data.contaId as string,
+    categoriaId: data.categoriaId as string,
+    valor: data.valor as number,
+    data: (data.data as Timestamp).toDate(),
+    descricao: data.descricao as string,
+    registradoPorId: data.registradoPorId as string,
+    registradoEm: (data.registradoEm as Timestamp).toDate(),
   };
 }
 
@@ -31,7 +35,8 @@ export class DespesaRepository implements IDespesaRepository {
 
   async findAll(): Promise<Despesa[]> {
     try {
-      const snap = await getDocs(this.col);
+      const q = query(this.col, orderBy('registradoEm', 'desc'));
+      const snap = await getDocs(q);
       return snap.docs.map((d) => toDespesa(d.id, d.data() as Record<string, unknown>));
     } catch (error) {
       console.error('[DespesaRepository.findAll]', error);
@@ -41,9 +46,8 @@ export class DespesaRepository implements IDespesaRepository {
 
   async create(data: CreateDespesaDTO): Promise<Despesa> {
     try {
-      const payload = { ...data };
       const ref = await addDoc(this.col, {
-        ...payload,
+        ...data,
         registradoEm: serverTimestamp(),
       });
       const created = await getDoc(ref);
@@ -66,4 +70,30 @@ export class DespesaRepository implements IDespesaRepository {
     }
   }
 
+  async findByPeriodo(inicio: Date, fim: Date): Promise<Despesa[]> {
+    try {
+      const q = query(
+        this.col,
+        where('data', '>=', Timestamp.fromDate(inicio)),
+        where('data', '<=', Timestamp.fromDate(fim)),
+        orderBy('data', 'asc')
+      );
+      const snap = await getDocs(q);
+      return snap.docs.map((d) => toDespesa(d.id, d.data() as Record<string, unknown>));
+    } catch (error) {
+      console.error(`[DespesaRepository.findByPeriodo]`, error);
+      throw new Error('Erro ao buscar despesas por período');
+    }
+  }
+
+  async findByAnimal(animalId: string): Promise<Despesa[]> {
+    try {
+      const q = query(this.col, where('prontuarioId', '==', animalId), orderBy('data', 'desc'));
+      const snap = await getDocs(q);
+      return snap.docs.map((d) => toDespesa(d.id, d.data() as Record<string, unknown>));
+    } catch (error) {
+      console.error(`[DespesaRepository.findByAnimal] animalId=${animalId}`, error);
+      throw new Error('Erro ao buscar despesas por animal');
+    }
+  }
 }

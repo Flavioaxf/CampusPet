@@ -12,6 +12,7 @@ const config: Config = {
     'src/services/AnimalService.ts',
     'src/services/ProntuarioService.ts',
     'src/services/ApprovalService.ts',
+    'src/services/FinanceiroService.ts',
     'src/services/repositories/UsuarioRepository.ts',
     'src/services/repositories/AnimalRepository.ts',
     'src/services/repositories/ProntuarioRepository.ts',
@@ -25,6 +26,11 @@ const config: Config = {
     'src/services/repositories/AlteracaoPendenteRepository.ts',
     'src/services/repositories/LogAuditoriaRepository.ts',
     'src/services/repositories/NotificacaoRepository.ts',
+    'src/services/repositories/DoacaoRepository.ts',
+    'src/services/repositories/DespesaRepository.ts',
+    'src/services/repositories/EstornoRepository.ts',
+    'src/services/repositories/ContaFinanceiraRepository.ts',
+    'src/services/repositories/CategoriaFinanceiraRepository.ts',
   ],
   coverageThreshold: {
     global: {

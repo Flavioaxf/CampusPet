@@ -6,4 +6,5 @@ export interface ICategoriaFinanceiraRepository {
   create(data: CreateCategoriaFinanceiraDTO): Promise<CategoriaFinanceira>;
   update(id: string, data: Partial<CategoriaFinanceira>): Promise<CategoriaFinanceira>;
   delete(id: string): Promise<void>;
+  hasMovimentacoes(id: string): Promise<boolean>;
 }

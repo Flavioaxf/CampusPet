@@ -1,17 +1,26 @@
-import { collection, doc, getDoc, getDocs, addDoc, updateDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, addDoc, updateDoc, query, where, orderBy, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import type { IDoacaoRepository } from '@/services/interfaces/IDoacaoRepository';
 import type { Doacao, CreateDoacaoDTO } from '@/types/domain';
+import { StatusDoacao, TipoDoacao, MetodoDoacao, OrigemDoacao } from '@/types/enums';
 
 const COLLECTION = 'doacoes';
 
 function toDoacao(id: string, data: Record<string, unknown>): Doacao {
-  const { data: dateField, registradoEm, ...rest } = data;
   return {
     id,
-    ...(rest as unknown as Omit<Doacao, 'id' | 'data' | 'registradoEm'>),
-    data: dateField ? (dateField as Timestamp).toDate() : new Date(),
-    registradoEm: registradoEm ? (registradoEm as Timestamp).toDate() : new Date(),
+    transactionId: data.transactionId as string | null,
+    tipo: data.tipo as TipoDoacao,
+    valor: data.valor as number,
+    data: (data.data as Timestamp).toDate(),
+    nomeDoador: data.nomeDoador as string | null,
+    metodo: data.metodo as MetodoDoacao,
+    status: data.status as StatusDoacao,
+    origem: data.origem as OrigemDoacao,
+    contaId: data.contaId as string,
+    categoriaId: data.categoriaId as string,
+    registradoPorId: data.registradoPorId as string | null,
+    registradoEm: (data.registradoEm as Timestamp).toDate(),
   };
 }
 
@@ -31,7 +40,8 @@ export class DoacaoRepository implements IDoacaoRepository {
 
   async findAll(): Promise<Doacao[]> {
     try {
-      const snap = await getDocs(this.col);
+      const q = query(this.col, orderBy('registradoEm', 'desc'));
+      const snap = await getDocs(q);
       return snap.docs.map((d) => toDoacao(d.id, d.data() as Record<string, unknown>));
     } catch (error) {
       console.error('[DoacaoRepository.findAll]', error);
@@ -41,9 +51,8 @@ export class DoacaoRepository implements IDoacaoRepository {
 
   async create(data: CreateDoacaoDTO): Promise<Doacao> {
     try {
-      const payload = { ...data };
       const ref = await addDoc(this.col, {
-        ...payload,
+        ...data,
         registradoEm: serverTimestamp(),
       });
       const created = await getDoc(ref);
@@ -66,4 +75,30 @@ export class DoacaoRepository implements IDoacaoRepository {
     }
   }
 
+  async findByStatus(status: StatusDoacao): Promise<Doacao[]> {
+    try {
+      const q = query(this.col, where('status', '==', status), orderBy('registradoEm', 'desc'));
+      const snap = await getDocs(q);
+      return snap.docs.map((d) => toDoacao(d.id, d.data() as Record<string, unknown>));
+    } catch (error) {
+      console.error(`[DoacaoRepository.findByStatus] status=${status}`, error);
+      throw new Error('Erro ao buscar doaÃ§Ãµes por status');
+    }
+  }
+
+  async findByPeriodo(inicio: Date, fim: Date): Promise<Doacao[]> {
+    try {
+      const q = query(
+        this.col,
+        where('data', '>=', Timestamp.fromDate(inicio)),
+        where('data', '<=', Timestamp.fromDate(fim)),
+        orderBy('data', 'asc')
+      );
+      const snap = await getDocs(q);
+      return snap.docs.map((d) => toDoacao(d.id, d.data() as Record<string, unknown>));
+    } catch (error) {
+      console.error(`[DoacaoRepository.findByPeriodo]`, error);
+      throw new Error('Erro ao buscar doaÃ§Ãµes por perÃ­odo');
+    }
+  }
 }

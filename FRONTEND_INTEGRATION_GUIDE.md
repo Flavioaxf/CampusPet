@@ -1,129 +1,171 @@
-# Guia de Integração Front-end — CampusPet
+# 📖 Bíblia do Front-end — Guia de Integração CampusPet
 
-Este guia descreve como os componentes e hooks do front-end devem consumir os serviços de dados e lógica de negócio do CampusPet.
-
-## ⚠️ Regra de Ouro: Arquitetura em Camadas
-
-Seguindo as diretrizes de `architecture.md`, **nunca** importe nada diretamente dos seguintes locais em seus componentes ou hooks:
-- ❌ `firebase/*`
-- ❌ `@/lib/firebase/config`
-- ❌ `@/services/repositories/*`
-
-Toda a interação com dados deve ser feita através de **serviços** ou instâncias de **repositórios** exportadas por `@/services`.
+Este documento é o guia definitivo para a equipe de UI. Ele descreve como os componentes e hooks do front-end devem consumir a camada de dados e lógica de negócio do sistema, garantindo segurança, padronização e integridade das regras de negócio.
 
 ---
 
-## 📦 Onde Importar?
+## 1. ⚠️ A Regra de Ouro Arquitetural
 
-O ponto único de entrada para o front-end é o arquivo `src/services/index.ts`.
+**Componentes React, Hooks e Server Actions NUNCA devem importar nada diretamente de `firebase/*` ou de `src/services/repositories/*`.**
 
+O acesso ao banco de dados e à lógica de negócio deve ser feito **EXCLUSIVAMENTE** através dos singletons exportados em:
+👉 `src/services/index.ts`
+
+### ✅ O Jeito Certo:
 ```typescript
-// ✅ Maneira Correta
-import { authService, animalService, animalRepository } from '@/services';
-import type { Animal } from '@/types/domain';
-import { StatusAnimal } from '@/types/enums';
+import { authService, financeiroService, animalService } from '@/services';
+```
+
+### ❌ O Jeito Errado:
+```typescript
+import { db } from '@/lib/firebase/config'; // PROIBIDO
+import { collection, getDocs } from 'firebase/firestore'; // PROIBIDO
+import { DoacaoRepository } from '@/services/repositories/DoacaoRepository'; // PROIBIDO
 ```
 
 ---
 
-## 🔐 Autenticação
+## 2. 🏗️ Setup de Tipagem
 
-Use o `authService` para operações de login e gestão de conta.
-
-### Exemplo: Login em um Server Action ou Componente
+O sistema é 100% tipado. Sempre utilize as interfaces e enums oficiais para garantir que os dados exibidos e enviados estejam corretos.
 
 ```typescript
-import { authService } from '@/services';
+// Importando Interfaces (Entidades e DTOs)
+import type { Usuario, Animal, Doacao, CreateDoacaoDTO } from '@/types/domain';
 
-async function handleLogin(formData: FormData) {
-  const email = formData.get('email') as string;
-  const password = formData.get('password') as string;
+// Importando Enums (Status, Perfis, Tipos)
+import { PerfilUsuario, StatusAnimal, StatusDoacao, TipoDoacao } from '@/types/enums';
+```
 
+---
+
+## 3. 💻 Exemplos Práticos de Código
+
+### 🔐 Autenticação e RBAC (Controle de Acesso)
+Para validar se um usuário pode acessar uma funcionalidade ou ver um botão:
+
+```typescript
+'use client';
+import { useAuth } from '@/hooks/useAuth'; // Hook sugerido que consome o authService
+import { PerfilUsuario } from '@/types/enums';
+
+export function PainelGestor() {
+  const { user } = useAuth();
+
+  // Validação de Perfil (RBAC)
+  const isGestor = user?.perfil === PerfilUsuario.GESTOR;
+
+  if (!isGestor) {
+    return <p>Acesso negado. Esta área é exclusiva para Gestores.</p>;
+  }
+
+  return <div>Bem-vindo ao Painel de Controle</div>;
+}
+```
+
+### 🐾 Gestão de Animais (Vitrine Pública)
+O `animalService` já implementa a **RN-03**, garantindo que apenas animais aptos e aprovados apareçam na vitrine.
+
+```typescript
+import { animalService } from '@/services';
+
+// Em um Server Component ou Hook
+async function carregarVitrine() {
   try {
-    const token = await authService.login(email, password);
-    // Armazene o token ou redirecione
+    // Retorna apenas animais com status=PARA_ADOCAO e aptoParaAdocao=true
+    const animais = await animalService.listarElegiveisParaVitrine();
+    return animais;
   } catch (error) {
-    console.error(error.message); // "Credenciais inválidas."
+    // Erros já vêm em PT-BR
+    toast.error('Erro ao carregar a vitrine de adoção.');
+  }
+}
+```
+
+### 💰 Módulo Financeiro: Doação Manual (Workflow RN-01)
+O serviço decide automaticamente se a doação entra como `CONFIRMADO` ou `PENDENTE`.
+
+```typescript
+import { financeiroService } from '@/services';
+import { TipoDoacao, MetodoDoacao } from '@/types/enums';
+
+async function handleNovaDoacao(dadosForm: any, usuarioLogado: Usuario) {
+  try {
+    const payload = {
+      ...dadosForm,
+      data: new Date(),
+      tipo: TipoDoacao.DINHEIRO,
+      metodo: MetodoDoacao.PIX,
+    };
+
+    const result = await financeiroService.registrarDoacaoManual(payload, usuarioLogado);
+
+    // RN-01: Se for Voluntário, o serviço retorna uma 'AlteracaoPendente'
+    if ('status' in result && result.status === 'PENDENTE') {
+      toast.info('Registro enviado para aprovação do Gestor.');
+    } else {
+      toast.success('Doação registrada e confirmada com sucesso!');
+    }
+  } catch (error: any) {
+    toast.error(error.message);
+  }
+}
+```
+
+### 🔄 Módulo Financeiro: Estorno (Regra RN-02)
+O estorno nunca apaga o registro original, ele cria um novo registro de `Estorno` vinculado.
+
+```typescript
+import { financeiroService } from '@/services';
+
+async function realizarEstorno(doacaoId: string, justificativa: string, gestor: Usuario) {
+  try {
+    // RN-02: O serviço valida se a justificativa tem no mínimo 10 caracteres
+    const estorno = await financeiroService.estornarDoacao(doacaoId, justificativa, gestor);
+    
+    toast.success('Doação estornada com sucesso!');
+    return estorno;
+  } catch (error: any) {
+    // Exibe "A justificativa de estorno deve ter pelo menos 10 caracteres (RN-02)."
+    toast.error(error.message);
   }
 }
 ```
 
 ---
 
-## 🐕 Gestão de Animais
+## 4. 🚨 Tratamento de Erros Padrão
 
-Use o `animalService` para lógica de negócio e o `animalRepository` para buscas simples.
-
-### Listando Animais para a Vitrine (Regra RN-03)
-
-O `animalService` já encapsula a lógica de filtragem para a vitrine pública.
+Nossos serviços lançam exceções estruturadas com mensagens em **Português Brasileiro (PT-BR)** prontas para o usuário final. Sempre envolva as chamadas em `try/catch`.
 
 ```typescript
-import { animalService } from '@/services';
+import { financeiroService } from '@/services';
 
-// No seu componente ou hook
-const animaisElegiveis = await animalService.listarElegiveisParaVitrine();
-```
-
-### Cadastrando um Animal (Workflow RN-01)
-
-O método `cadastrarAnimal` gerencia automaticamente se a criação será direta (Gestor) ou se criará uma alteração pendente (Voluntário).
-
-```typescript
-import { animalService } from '@/services';
-
-async function onSubmit(dados: CreateAnimalDTO, usuarioLogado: Usuario) {
-  const result = await animalService.cadastrarAnimal(dados, usuarioLogado);
-
-  if ('status' in result && result.status === 'PENDENTE') {
-    alert('Sua solicitação foi enviada para aprovação do gestor.');
-  } else {
-    alert('Animal cadastrado com sucesso!');
+async function deletarConta(id: string) {
+  try {
+    await financeiroService.excluirContaFinanceira(id);
+    toast.success('Conta excluída com sucesso!');
+  } catch (error: any) {
+    // O erro capturado será, por exemplo: 
+    // "Não é possível excluir uma conta que possui movimentações vinculadas (RF-16)."
+    toast.error(error.message); 
   }
 }
 ```
 
 ---
 
-## 📋 Prontuário Médico
+## 5. 🛠️ Comandos de Validação
 
-Use o `prontuarioService` para registrar eventos clínicos.
-
-### Registrando um Óbito (Operação Irreversível RN-06)
-
-```typescript
-import { prontuarioService } from '@/services';
-
-async function handleObito(idProntuario: string, causa: CausaObito, usuario: Usuario) {
-  if (confirm('Esta operação é irreversível. Confirma?')) {
-    await prontuarioService.registrarObito({
-      prontuarioId: idProntuario,
-      dataObito: new Date(),
-      causa,
-      observacoes: '...',
-      registradoPorId: usuario.id
-    }, usuario);
-  }
-}
-```
-
----
-
-## 💡 Boas Práticas
-
-1.  **Tipagem**: Sempre utilize as interfaces de `src/types/domain.ts` e enums de `src/types/enums.ts`.
-2.  **Tratamento de Erros**: Os serviços lançam erros com mensagens amigáveis em **PT-BR**. Capture-os em blocos `try/catch` para exibir feedbacks na UI.
-3.  **Hooks Customizados**: Prefira encapsular chamadas de serviços em hooks customizados (ex: `useAnimais`, `useAuth`) para manter os componentes limpos.
-4.  **Loading States**: Sempre gerencie estados de carregamento ao chamar métodos assíncronos dos serviços.
-
----
-
-## 🛠️ Validação de Arquitetura
-
-Para garantir que seu código não está violando as camadas, você pode rodar:
+Antes de subir qualquer código para o repositório, garanta que ele passa nos testes de integridade:
 
 ```bash
+# 1. Verifica erros de tipagem
+npx tsc --noEmit
+
+# 2. Verifica padrões de código e imports proibidos
 npm run lint
-# E o check de segurança:
-grep -r "from 'firebase" src/ --exclude-dir=lib/firebase --exclude-dir=services/repositories
+
+# 3. Garante que nada foi quebrado
+npm test
 ```
