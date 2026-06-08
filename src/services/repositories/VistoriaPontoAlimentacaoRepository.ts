@@ -1,16 +1,19 @@
-import { collection, doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, Timestamp } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, query, where, orderBy, limit, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import type { IVistoriaPontoAlimentacaoRepository } from '@/services/interfaces/IVistoriaPontoAlimentacaoRepository';
 import type { VistoriaPontoAlimentacao, CreateVistoriaPontoAlimentacaoDTO } from '@/types/domain';
+import { TipoTarefa } from '@/types/enums';
 
 const COLLECTION = 'vistorias_pontos';
 
 function toVistoriaPontoAlimentacao(id: string, data: Record<string, unknown>): VistoriaPontoAlimentacao {
-  const { dataHora, ...rest } = data;
   return {
     id,
-    ...(rest as unknown as Omit<VistoriaPontoAlimentacao, 'id' | 'dataHora'>),
-    dataHora: dataHora ? (dataHora as Timestamp).toDate() : new Date(),
+    pontoId: data.pontoId as string,
+    voluntarioId: data.voluntarioId as string,
+    tipoTarefa: data.tipoTarefa as TipoTarefa,
+    dataHora: (data.dataHora as Timestamp).toDate(),
+    observacoes: data.observacoes as string | null,
   };
 }
 
@@ -40,9 +43,9 @@ export class VistoriaPontoAlimentacaoRepository implements IVistoriaPontoAliment
 
   async create(data: CreateVistoriaPontoAlimentacaoDTO): Promise<VistoriaPontoAlimentacao> {
     try {
-      const payload = { ...data };
       const ref = await addDoc(this.col, {
-        ...payload,
+        ...data,
+        dataHora: serverTimestamp(),
       });
       const created = await getDoc(ref);
       return toVistoriaPontoAlimentacao(created.id, (created.data() as Record<string, unknown>) || {});
@@ -70,6 +73,38 @@ export class VistoriaPontoAlimentacaoRepository implements IVistoriaPontoAliment
     } catch (error) {
       console.error(`[VistoriaPontoAlimentacaoRepository.delete] id=${id}`, error);
       throw new Error(`Erro ao excluir VistoriaPontoAlimentacao com id ${id}`);
+    }
+  }
+
+  async findUltimaVistoria(pontoId: string): Promise<VistoriaPontoAlimentacao | null> {
+    try {
+      const q = query(
+        this.col,
+        where('pontoId', '==', pontoId),
+        orderBy('dataHora', 'desc'),
+        limit(1)
+      );
+      const snap = await getDocs(q);
+      if (snap.empty) return null;
+      return toVistoriaPontoAlimentacao(snap.docs[0].id, snap.docs[0].data() as Record<string, unknown>);
+    } catch (error) {
+      console.error(`[VistoriaPontoAlimentacaoRepository.findUltimaVistoria] pontoId=${pontoId}`, error);
+      throw new Error('Erro ao buscar última vistoria do ponto');
+    }
+  }
+
+  async findByPonto(pontoId: string): Promise<VistoriaPontoAlimentacao[]> {
+    try {
+      const q = query(
+        this.col,
+        where('pontoId', '==', pontoId),
+        orderBy('dataHora', 'desc')
+      );
+      const snap = await getDocs(q);
+      return snap.docs.map((d) => toVistoriaPontoAlimentacao(d.id, d.data() as Record<string, unknown>));
+    } catch (error) {
+      console.error(`[VistoriaPontoAlimentacaoRepository.findByPonto] pontoId=${pontoId}`, error);
+      throw new Error('Erro ao buscar vistorias do ponto');
     }
   }
 }

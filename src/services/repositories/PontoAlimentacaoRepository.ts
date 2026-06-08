@@ -1,14 +1,19 @@
-import { collection, doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import type { IPontoAlimentacaoRepository } from '@/services/interfaces/IPontoAlimentacaoRepository';
 import type { PontoAlimentacao, CreatePontoAlimentacaoDTO } from '@/types/domain';
+import { TipoPonto, StatusPonto } from '@/types/enums';
 
 const COLLECTION = 'pontos_alimentacao';
 
 function toPontoAlimentacao(id: string, data: Record<string, unknown>): PontoAlimentacao {
   return {
     id,
-    ...(data as unknown as Omit<PontoAlimentacao, 'id'>),
+    nome: data.nome as string,
+    tipo: data.tipo as TipoPonto,
+    latitude: data.latitude as number,
+    longitude: data.longitude as number,
+    status: data.status as StatusPonto,
   };
 }
 
@@ -38,9 +43,8 @@ export class PontoAlimentacaoRepository implements IPontoAlimentacaoRepository {
 
   async create(data: CreatePontoAlimentacaoDTO): Promise<PontoAlimentacao> {
     try {
-      const payload = { ...data };
       const ref = await addDoc(this.col, {
-        ...payload,
+        ...data,
       });
       const created = await getDoc(ref);
       return toPontoAlimentacao(created.id, (created.data() as Record<string, unknown>) || {});
@@ -68,6 +72,17 @@ export class PontoAlimentacaoRepository implements IPontoAlimentacaoRepository {
     } catch (error) {
       console.error(`[PontoAlimentacaoRepository.delete] id=${id}`, error);
       throw new Error(`Erro ao excluir PontoAlimentacao com id ${id}`);
+    }
+  }
+
+  async findAtivos(): Promise<PontoAlimentacao[]> {
+    try {
+      const q = query(this.col, where('status', '==', StatusPonto.ATIVO));
+      const snap = await getDocs(q);
+      return snap.docs.map((d) => toPontoAlimentacao(d.id, d.data() as Record<string, unknown>));
+    } catch (error) {
+      console.error('[PontoAlimentacaoRepository.findAtivos]', error);
+      throw new Error('Erro ao buscar pontos ativos');
     }
   }
 }

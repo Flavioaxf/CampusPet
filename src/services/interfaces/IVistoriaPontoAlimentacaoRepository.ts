@@ -6,4 +6,6 @@ export interface IVistoriaPontoAlimentacaoRepository {
   create(data: CreateVistoriaPontoAlimentacaoDTO): Promise<VistoriaPontoAlimentacao>;
   update(id: string, data: Partial<VistoriaPontoAlimentacao>): Promise<VistoriaPontoAlimentacao>;
   delete(id: string): Promise<void>;
+  findUltimaVistoria(pontoId: string): Promise<VistoriaPontoAlimentacao | null>;
+  findByPonto(pontoId: string): Promise<VistoriaPontoAlimentacao[]>;
 }

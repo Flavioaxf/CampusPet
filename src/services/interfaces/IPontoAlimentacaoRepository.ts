@@ -6,4 +6,5 @@ export interface IPontoAlimentacaoRepository {
   create(data: CreatePontoAlimentacaoDTO): Promise<PontoAlimentacao>;
   update(id: string, data: Partial<PontoAlimentacao>): Promise<PontoAlimentacao>;
   delete(id: string): Promise<void>;
+  findAtivos(): Promise<PontoAlimentacao[]>;
 }
